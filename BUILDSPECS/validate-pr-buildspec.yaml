@@ -1,0 +1,87 @@
+version: 0.2
+
+env:
+# Local variables
+  variables:
+    #This has to match your terragrunt environment directory name 
+    TERRAGRUNT_ENVIRONMENT: "Dev"
+# CodeBuild static variables:
+  # S3_BUCKET: were to store the artifacts
+  # ARTIFACTS_PREFIX: the folder name where to store the artifacts
+# CloudWatch Events rule will also provide the following environment variables:
+  # PULL_REQUEST_ID
+  # SOURCE_COMMIT
+  # DESTINATION_COMMIT
+  # SOURCE_BRANCH
+  # DESTINATION_BRANCH
+  # ACCOUNT
+
+phases:
+  pre_build:
+    commands:
+      # Preparing build metadata
+      - BUILD_NAME=$(echo $CODEBUILD_BUILD_ID | cut -d':' -f1)
+      - BUILD_ID=$(echo $CODEBUILD_BUILD_ID | cut -d':' -f2)
+      - BUILD_URL=$(echo \
+          "https://$AWS_DEFAULT_REGION.console.aws.amazon.com/codesuite/codebuild/$ACCOUNT/projects/$BUILD_NAME/build/$BUILD_NAME%3A$BUILD_ID/?region=$AWS_DEFAULT_REGION")
+      - export ARTIFACTS_URL=\
+          "https://s3.console.aws.amazon.com/s3/buckets/$S3_BUCKET?region=$AWS_DEFAULT_REGION&prefix=$ARTIFACTS_PREFIX/$PULL_REQUEST_ID/$CODEBUILD_BUILD_NUMBER/showversions=false" 
+      # Pull Request comment: Build starting notification 
+      - |
+        aws codecommit post-comment-for-pull-request \
+          --pull-request-id $PULL_REQUEST_ID \
+          --repository-name $REPOSITORY_NAME \
+          --before-commit-id $SOURCE_COMMIT \
+          --after-commit-id $DESTINATION_COMMIT \
+          --content "⚙️ Build '$BUILD_NAME' \#[$CODEBUILD_BUILD_NUMBER]($BUILD_URL) started."
+      # Moving the code to a specific directory to avoid issue: https://github.com/gruntwork-io/terragrunt/issues/1565
+      - mkdir /codebuild/output/code 
+      - cp -la ${CODEBUILD_SRC_DIR}/. /codebuild/output/code
+      - export CODEBUILD_SRC_DIR="/codebuild/output/code"
+
+  build:
+    commands:
+      # Checking out the source branch of the pull request
+      - git checkout $SOURCE_COMMIT 
+      # Initializing Terragrunt
+      - cd TERRAGRUNT/$TERRAGRUNT_ENVIRONMENT/
+      - terragrunt run-all init
+      # Running custom python scripts to check the Terragrunt code
+      - python3 TERRAGRUNT_CHECKOV.py 
+      - python3 TERRAGRUNT_TFLINT.py 
+      - python3 TERRAGRUNT_TFSEC.py 
+      # Changing back to the main dir
+      - cd $CODEBUILD_SRC_DIR 
+
+  post_build:
+    commands:
+      # if the build is sucessful, we post a comment in the Pull request with the link to the Artifacts and we change the content of the var content accordingly
+      - |
+        if [ $CODEBUILD_BUILD_SUCCEEDING = 1 ]; then
+          content="✔️ Build '$BUILD_NAME' \#[$CODEBUILD_BUILD_NUMBER]($BUILD_URL) succeeded."
+
+          aws codecommit post-comment-for-pull-request \
+            --pull-request-id $PULL_REQUEST_ID \
+            --repository-name $REPOSITORY_NAME \
+            --before-commit-id $SOURCE_COMMIT \
+            --after-commit-id $DESTINATION_COMMIT \
+            --content "📦 Build '$BUILD_NAME' \#$CODEBUILD_BUILD_NUMBER [Artifacts]($ARTIFACTS_URL) are ready."
+        else
+          content="❌ Build '$BUILD_NAME' \#[$CODEBUILD_BUILD_NUMBER]($BUILD_URL) failed."
+        fi
+      # Pull Request comment: Build information
+      - |
+        aws codecommit post-comment-for-pull-request \
+          --pull-request-id $PULL_REQUEST_ID \
+          --repository-name $REPOSITORY_NAME \
+          --before-commit-id $DESTINATION_COMMIT \
+          --after-commit-id $SOURCE_COMMIT \
+          --content "$content"
+
+artifacts:
+  # We will store the resulting artifacts in $S3_BUCKET/$ARTIFACTS_PREFIX/$PULL_REQUEST_ID/$CODEBUILD_BUILD_NUMBER
+  files:
+    - "${CODEBUILD_SRC_DIR}/*PRETTY*"
+    - "${CODEBUILD_SRC_DIR}/*REPORT*"
+  name: $PULL_REQUEST_ID/$CODEBUILD_BUILD_NUMBER
+  discard-paths: yes
