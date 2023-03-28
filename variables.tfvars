@@ -6,7 +6,7 @@ AWS_PROFILE  =
 DEPLOYMENT   =
 PROJECT_NAME =
 AUTHOR       =
-#-------------
+#-------------------------------------
 # GENERAL VARIABLES
 #-------------------------------------
 REPOSITORY_NAME            =

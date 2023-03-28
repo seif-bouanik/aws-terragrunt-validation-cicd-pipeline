@@ -89,7 +89,7 @@ resource "aws_iam_role" "pr_validation_codebuild" {
           "codebuild:BatchPutCodeCoverages",
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
-          "logs:PutLogEvents"],
+        "logs:PutLogEvents"],
         Effect   = "Allow",
         Resource = "*"
       }]
@@ -132,7 +132,7 @@ resource "aws_codebuild_project" "pr_validation" {
     type                   = "S3"
     location               = var.ARTIFACTS_BUCKET
     bucket_owner_access    = "READ_ONLY"
-    path                   = var.ARTIFACTS_PATH_PR_VALIDATION 
+    path                   = var.ARTIFACTS_PATH_PR_VALIDATION
     namespace_type         = "NONE"
     packaging              = "NONE"
     encryption_disabled    = "true"

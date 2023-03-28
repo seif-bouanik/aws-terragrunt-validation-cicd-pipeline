@@ -13,7 +13,7 @@ provider "aws" {
     tags = {
       Project    = var.PROJECT_NAME
       Deployment = var.DEPLOYMENT
-      Author      = var.AUTHOR
+      Author     = var.AUTHOR
     }
   }
 }
