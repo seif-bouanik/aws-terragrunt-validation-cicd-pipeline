@@ -1,10 +1,12 @@
 version: 0.2
 
+# Environment variables
 env:
 # Local variables
   variables:
-    #This has to match your terragrunt environment directory name 
-    TERRAGRUNT_ENVIRONMENT: "Dev"
+    TERRAGRUNT_DIR: "TERRAGRUNT" # Where you store your terragrunt environments
+    TERRAGRUNT_ENVIRONMENT: "DEV" # Where you store yoru environment root terragrunt.hcl file
+
 # CodeBuild static variables:
   # S3_BUCKET: were to store the artifacts
   # ARTIFACTS_PREFIX: the folder name where to store the artifacts
@@ -26,7 +28,7 @@ phases:
       - BUILD_URL=$(echo \
           "https://$AWS_DEFAULT_REGION.console.aws.amazon.com/codesuite/codebuild/$ACCOUNT/projects/$BUILD_NAME/build/$BUILD_NAME%3A$BUILD_ID/?region=$AWS_DEFAULT_REGION")
       - export ARTIFACTS_URL=\
-        "https://s3.console.aws.amazon.com/s3/buckets/$S3_BUCKET?region=$AWS_DEFAULT_REGION&prefix=$ARTIFACTS_PREFIX/$PULL_REQUEST_ID/$CODEBUILD_BUILD_NUMBER/showversions=false" 
+        "https://s3.console.aws.amazon.com/s3/buckets/$S3_BUCKET?region=$AWS_DEFAULT_REGION&prefix=$ARTIFACTS_PREFIX/$PULL_REQUEST_ID/$CODEBUILD_BUILD_NUMBER/&showversions=false" 
       # Pull Request comment: Build starting notification 
       - |
         aws codecommit post-comment-for-pull-request \
@@ -42,14 +44,15 @@ phases:
 
   build:
     commands:
+      # Changing to the new location of the code defined in the prebuild stage 
+      - cd $CODEBUILD_SRC_DIR
       # Checkout the destination branch of the pull request (post-merge)
       - git checkout $MERGED_BRANCH
-      # Init Terragrunt and applying the infrastructure changes
-      - cd TERRAGRUNT/$TERRAGRUNT_ENVIRONMENT/ 
-      - terragrunt run-all init
+      # Init Terragrunt and apply the infrastructure changes
+      - cd $TERRAGRUNT_DIR/$TERRAGRUNT_ENVIRONMENT/ 
       - terragrunt run-all apply --terragrunt-non-interactive -auto-approve  > $CODEBUILD_SRC_DIR/TMP.txt
       # Cleaning up the Terragrunt apply output
-      - sed -e 's/\x1b\[[0-9;]*m//g' $CODEBUILD_SRC_DIR/TMP.txt > $CODEBUILD_SRC_DIR/TERRAGRUNT_REPORT.txt
+      - sed -e 's/\x1b\[[0-9;]*m//g' $CODEBUILD_SRC_DIR/TMP.txt > $CODEBUILD_SRC_DIR/TERRAGRUNT_APPLY_REPORT.txt
       # Changing back to the main dir
       - cd $CODEBUILD_SRC_DIR
 
@@ -81,6 +84,6 @@ phases:
 # We will store the resulting artifacts in $S3_BUCKET/$ARTIFACTS_PREFIX/$PULL_REQUEST_ID/$CODEBUILD_BUILD_NUMBER
 artifacts:
   files:
-    - "$CODEBUILD_SRC_DIR/TERRAGRUNT_REPORT.txt"
+    - "$CODEBUILD_SRC_DIR/TERRAGRUNT_APPLY_REPORT.txt"
   name: $PULL_REQUEST_ID/$CODEBUILD_BUILD_NUMBER
   discard-paths: yes
