@@ -15,7 +15,7 @@ variable "DEPLOYMENT" {
 variable "PROJECT_NAME" {
   type = string
 }
-variable "Author" {
+variable "AUTHOR" {
   type = string
 }
 #-------------------------------------
@@ -23,22 +23,27 @@ variable "Author" {
 #-------------------------------------
 variable "REPOSITORY_NAME" {
   type    = list(any)
+  description = "Repository name"
   default = ["default"]
 }
 variable "REPOSITORY_URL" {
   type    = string
+  description = "Repository name"
   default = "default"
 }
 variable "BUILDSPEC_SOURCE_BRANCH" {
   type    = string
+  description = "Which branch contains the pipeline buildspecs"
   default = "default"
 }
 variable "DOCKER_IMAGE" {
   type    = string
+  description = "Should include the repository, image name and tag"
   default = "default"
 }
 variable "ARTIFACTS_BUCKET" {
   type    = string
+  description = "S3 bucket that will store the artifacts"
   default = "default"
 }
 variable "EVENTBRIDGE_INPUT_TEMPLATE" {
@@ -83,16 +88,9 @@ variable "EVENTBRIDGE_INPUT_TEMPLATE" {
     ]}
 EOF
 }
-variable "ECR_REPOSITORY_NAME" {
-  type    = string
-  default = ""
-}
-variable "ECR_IMAGE_TAG" {
-  type    = string
-  default = ""
-}
 variable "DESTINATION_BRANCHES" {
   type    = list(any)
+  description = "Should be in the format: refs/heads/<branch>"
   default = ["refs/heads/master"]
 }
 #-------------------------------------
@@ -100,6 +98,7 @@ variable "DESTINATION_BRANCHES" {
 #-------------------------------------
 variable "ARTIFACTS_PATH_PR_VALIDATION" {
   type    = string
+  description = "The folder name of the Pull Request validation build artifacts"
   default = "default"
 }
 variable "CLOUDWATCH_LOG_GROUP_PR_VALIDATION" {
@@ -108,6 +107,7 @@ variable "CLOUDWATCH_LOG_GROUP_PR_VALIDATION" {
 }
 variable "BUILDSPEC_PR_VALIDATION" {
   type    = string
+  description = "The relative path where the buildpsec file for the Pull Request validation codebuild project is stored (including the extension)"
   default = ""
 }
 #-------------------------------------
@@ -115,6 +115,7 @@ variable "BUILDSPEC_PR_VALIDATION" {
 #-------------------------------------
 variable "ARTIFACTS_PATH_INFRASTRUCTURE_SYNC" {
   type    = string
+  description = "The folder name of the infrastructure sync build artifacts"
   default = "default"
 }
 variable "CLOUDWATCH_LOG_GROUP_INFRASTRUCTURE_SYNC" {
@@ -123,5 +124,6 @@ variable "CLOUDWATCH_LOG_GROUP_INFRASTRUCTURE_SYNC" {
 }
 variable "BUILDSPEC_INFRASTRUCTURE_SYNC" {
   type    = string
+  description = "The relative path where the buildpsec file for the infrastructure sync codebuild project is stored (including the extension)"
   default = ""
 }
